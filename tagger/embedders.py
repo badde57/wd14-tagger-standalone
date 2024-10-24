@@ -3,6 +3,7 @@ import numpy as np
 import torch
 from transformers import AutoModel, AutoTokenizer
 import torch.nn.functional as F
+from sentence_transformers import SentenceTransformer  # Import this
 
 class Embedder(ABC):
     @abstractmethod

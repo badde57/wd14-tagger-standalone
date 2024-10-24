@@ -1,9 +1,11 @@
 import logging
 import json
+from typing import Generator
 from pathlib import Path
 import numpy as np
 import onnxruntime as ort
 import torch
+from PIL import Image
 from tagger.interrogator import Interrogator
 from tagger.interrogators import interrogators
 from tagger.embedders import embedders
@@ -155,4 +157,4 @@ class Tagger:
                 yield from TaggerApp.explore_image_files(path)
 
 # Export the defaults for use in Click
-DEFAULTS = TaggerApp.DEFAULTS
+DEFAULTS = Tagger.DEFAULTS

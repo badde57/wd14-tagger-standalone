@@ -1,7 +1,7 @@
 import click
 import logging
 import sys
-from tagger import Tagger, DEFAULTS
+from tagger.tagger import Tagger, DEFAULTS
 
 # Set up logging
 logging.basicConfig(
