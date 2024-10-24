@@ -114,22 +114,62 @@ class Tagger:
         
         return tags, result[0], embedding
 
-    def process_file(self, file_path):
+    def process_image(self, image: Image.Image) -> dict:
+        """
+        Process a PIL Image object and return the tags, ratings, and embedding.
+        
+        Args:
+            image (PIL.Image.Image): The image to process.
+        
+        Returns:
+            dict: A dictionary containing tags, ratings, and embedding.
+        """
+        result = self.interrogator.interrogate(image)
+
+        tags = Interrogator.postprocess_tags(
+            result[1],
+            threshold=self.threshold,
+            escape_tag=not self.rawtag,
+            replace_underscore=not self.rawtag,
+            exclude_tags=set())
+        
+        sorted_tags = sorted(tags.items(), key=lambda x: x[1], reverse=True)
+        top_tags = sorted_tags[:self.max_tags] if self.max_tags > 0 else sorted_tags
+        tag_string = ", ".join([tag for tag, _ in top_tags])
+        
+        embedding = self.embedder.embed(tag_string)
+        
+        return {
+            "tags": tags,
+            "ratings": result[0],
+            "embedding": embedding.tolist() if isinstance(embedding, np.ndarray) else embedding
+        }
+
+    def process_file(self, file_path: str) -> str:
+        """
+        Process an image file and return the result as a JSON string.
+        
+        Args:
+            file_path (str): Path to the image file.
+        
+        Returns:
+            str: JSON string containing tags, ratings, and embedding.
+        """
         image_path = Path(file_path)
-        result = self.run_inference(image_path, self.interrogator.providers[0])
+        with Image.open(image_path) as img:
+            result = self.process_image(img)
         
         if self.compare_cpu and self.interrogator.providers[0] != 'CPUExecutionProvider':
-            cpu_result = self.run_inference(image_path, 'CPUExecutionProvider')
+            with Image.open(image_path) as img:
+                original_provider = self.interrogator.providers[0]
+                self.interrogator.providers = ['CPUExecutionProvider']
+                cpu_result = self.process_image(img)
+                self.interrogator.providers = [original_provider]
             logging.info("Comparing results with CPU execution:")
             self.compare_results(result, cpu_result)
         
-        tags, ratings, embedding = result
         logging.info("Processing complete. Output:")
-        return json.dumps({
-            "tags": tags,
-            "ratings": ratings,
-            "embedding": embedding.tolist() if isinstance(embedding, np.ndarray) else embedding
-        }, indent=2, cls=NumpyEncoder)
+        return json.dumps(result, indent=2, cls=NumpyEncoder)
 
     def process_directory(self, dir_path, ext, overwrite):
         root_path = Path(dir_path)
@@ -141,9 +181,10 @@ class Tagger:
                 continue
 
             logging.info(f'Processing: {image_path}')
-            tags, _, _ = self.image_interrogate(image_path)
+            with Image.open(image_path) as img:
+                result = self.process_image(img)
 
-            tags_str = ', '.join(tags.keys())
+            tags_str = ', '.join(result['tags'].keys())
 
             with open(caption_path, 'w') as fp:
                 fp.write(tags_str)
