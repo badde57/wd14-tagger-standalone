@@ -9,6 +9,7 @@ from pathlib import Path
 from huggingface_hub import hf_hub_download
 import re
 import json
+import logging
 
 from numpy import asarray, float32, expand_dims, exp
 
@@ -115,7 +116,7 @@ class WaifuDiffusionInterrogator(Interrogator):
         self.kwargs = kwargs
 
     def download(self) -> Tuple[os.PathLike, os.PathLike]:
-        print(f"Loading {self.name} model file from {self.kwargs['repo_id']}")
+        logging.info(f"Loading {self.name} model file from {self.kwargs['repo_id']}")
 
         model_path = Path(hf_hub_download(
             **self.kwargs, filename=self.model_path))
@@ -129,7 +130,7 @@ class WaifuDiffusionInterrogator(Interrogator):
         from onnxruntime import InferenceSession
         self.model = InferenceSession(str(model_path), providers=self.providers)
 
-        print(f'Loaded {self.name} model from {model_path}')
+        #print(f'Loaded {self.name} model from {model_path}')
 
         self.tags = pd.read_csv(tags_path)
 
@@ -199,7 +200,7 @@ class MLDanbooruInterrogator(Interrogator):
         self.model = None
 
     def download(self) -> Tuple[str, str]:
-        print(f"Loading {self.name} model file from {self.repo_id}")
+        logging.info(f"Loading {self.name} model file from {self.repo_id}")
 
         model_path = hf_hub_download(
             repo_id=self.repo_id,
